@@ -71,7 +71,7 @@ def balance_keyboard():
         [InlineKeyboardButton("💰 Convert Money to USDT", callback_data="convert_money")],
         [InlineKeyboardButton("💎 Buy Diamonds", callback_data="buy_diamonds")],
         [InlineKeyboardButton("📤 Withdraw", callback_data="withdraw")],
-        [InlineKeyboardButton("💳 Deposit", callback_data="deposit_menu")],
+        [InlineKeyboardButton("💳 Recargar", callback_data="deposit_menu")],
         [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)

@@ -303,6 +303,141 @@ async def handle_exchange_rates(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=settings_keyboard()
     )
 
+async def handle_search_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle search user functionality"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    context.user_data['searching_user'] = True
+    
+    await update.callback_query.edit_message_text(
+        "🔍 Search User\n\nSend the user ID or username to search:",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back", callback_data="admin_users")
+        ]])
+    )
+
+async def handle_game_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle game settings"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    from src.config import LOTTERY_TICKET_PRICE
+    
+    settings_text = (
+        "🎮 Game Settings:\n\n"
+        f"🎫 Lottery Ticket Price: {LOTTERY_TICKET_PRICE} 💰\n"
+        f"⚔️ Battle System: Active\n"
+        f"🎲 Dice Game: Active\n\n"
+        "Use /set_lottery_price <price> to change lottery price"
+    )
+    
+    await update.callback_query.edit_message_text(
+        settings_text,
+        reply_markup=settings_keyboard()
+    )
+
+async def handle_broadcast_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast message sending"""
+    if not context.user_data.get('broadcasting'):
+        return
+    
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        return
+    
+    message_text = update.message.text
+    context.user_data['broadcasting'] = False
+    
+    # Get all users
+    users = await db.find('users', {})
+    sent_count = 0
+    failed_count = 0
+    
+    await update.message.reply_text("📢 Broadcasting message to all users...")
+    
+    for user in users:
+        try:
+            await context.bot.send_message(
+                chat_id=user['user_id'],
+                text=f"📢 Broadcast Message:\n\n{message_text}"
+            )
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            print(f"Failed to send to user {user['user_id']}: {e}")
+    
+    await update.message.reply_text(
+        f"✅ Broadcast completed!\n\n"
+        f"📤 Sent: {sent_count}\n"
+        f"❌ Failed: {failed_count}",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back to Admin", callback_data="back_to_admin")
+        ]])
+    )
+
+async def handle_search_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle search user message input"""
+    if not context.user_data.get('searching_user'):
+        return
+    
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        return
+    
+    search_term = update.message.text.strip()
+    context.user_data['searching_user'] = False
+    
+    # Try to find user by ID or username
+    user = None
+    if search_term.isdigit():
+        user = await db.get_user(int(search_term))
+    else:
+        # Remove @ if present
+        username = search_term.replace('@', '')
+        user = await db.find_one('users', {"username": username})
+    
+    if not user:
+        await update.message.reply_text(
+            "❌ User not found!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_users")
+            ]])
+        )
+        return
+    
+    status = "🟢 Active" if user.get('status', 'active') == 'active' else "🔴 Banned"
+    user_info = (
+        f"👤 User Information:\n\n"
+        f"🆔 ID: {user['user_id']}\n"
+        f"👤 Username: @{user.get('username', 'N/A')}\n"
+        f"📛 Name: {user.get('first_name', 'N/A')}\n"
+        f"📊 Status: {status}\n"
+        f"💰 Money: {user.get('balance_money', 0)}\n"
+        f"💎 Diamonds: {user.get('balance_diamonds', 0)}\n"
+        f"💵 USDT: {user.get('balance_usdt', 0)}\n"
+        f"🦁 Animals: {len(user.get('animals', []))}\n"
+        f"👥 Referrals: {user.get('referral_count', 0)}\n"
+        f"📅 Joined: {user.get('joined_date', 'N/A')}"
+    )
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🚫 Ban User", callback_data=f"ban_user_{user['user_id']}"),
+            InlineKeyboardButton("✅ Unban User", callback_data=f"unban_user_{user['user_id']}")
+        ],
+        [InlineKeyboardButton("🔙 Back", callback_data="admin_users")]
+    ]
+    
+    await update.message.reply_text(
+        user_info,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
 async def handle_back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle back to admin menu"""
     user_id = update.effective_user.id

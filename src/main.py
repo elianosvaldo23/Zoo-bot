@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, time
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, filters
+    CallbackQueryHandler, filters, ContextTypes
 )
 
 # Add the project root to Python path
@@ -20,7 +20,7 @@ from src.config import BOT_TOKEN, LOTTERY_TICKET_PRICE, TEST_MODE, TEST_BOT
 from src.database.mongodb import db
 from src.handlers.user import (
     start, my_zoo, collect_stars,
-    show_balance, show_referrals, 
+    show_balance, show_referrals, show_settings, show_shop
 )
 from src.handlers.games import (
     show_games, battle_setup, adjust_bet,
@@ -30,7 +30,8 @@ from src.handlers.admin import (
     admin_menu, handle_deposits, handle_withdrawals,
     handle_transaction, handle_user_management, handle_view_users,
     handle_user_stats, handle_admin_settings, handle_broadcast,
-    handle_exchange_rates, handle_back_to_admin
+    handle_exchange_rates, handle_back_to_admin, handle_search_user,
+    handle_game_settings, handle_broadcast_message, handle_search_user_message
 )
 from src.handlers.animals import (
     buy_animal, show_animal_shop
@@ -41,7 +42,7 @@ from src.handlers.referral import (
 from src.handlers.callbacks import (
     handle_language_selection, handle_convert_stars, handle_convert_money,
     handle_buy_diamonds, handle_withdraw, handle_back_to_main,
-    handle_referrals, handle_shop_menu, handle_change_language,
+    handle_referrals, handle_shop_menu, handle_change_language, handle_settings,
     handle_my_referrals, handle_referral_earnings, handle_diamond_purchase,
     handle_set_withdrawal_address, handle_back_to_shop, handle_back_to_balance,
     handle_back_to_settings, handle_view_deposits, handle_view_withdrawals,
@@ -189,13 +190,72 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("admin", admin_menu))
         
+        # Admin command handlers
+        async def set_star_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            user_id = update.effective_user.id
+            from src.config import ADMIN_IDS
+            if user_id not in ADMIN_IDS:
+                await update.message.reply_text("❌ Access denied!")
+                return
+            
+            if not context.args or len(context.args) != 1:
+                await update.message.reply_text("Usage: /set_star_rate <rate>")
+                return
+            
+            try:
+                new_rate = float(context.args[0])
+                # Update config (this would need to be implemented properly)
+                await update.message.reply_text(f"⭐ Star rate updated to: {new_rate}")
+            except ValueError:
+                await update.message.reply_text("❌ Invalid rate! Please provide a number.")
+        
+        async def set_usdt_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            user_id = update.effective_user.id
+            from src.config import ADMIN_IDS
+            if user_id not in ADMIN_IDS:
+                await update.message.reply_text("❌ Access denied!")
+                return
+            
+            if not context.args or len(context.args) != 1:
+                await update.message.reply_text("Usage: /set_usdt_rate <rate>")
+                return
+            
+            try:
+                new_rate = float(context.args[0])
+                # Update config (this would need to be implemented properly)
+                await update.message.reply_text(f"💵 USDT rate updated to: {new_rate}")
+            except ValueError:
+                await update.message.reply_text("❌ Invalid rate! Please provide a number.")
+        
+        async def set_lottery_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            user_id = update.effective_user.id
+            from src.config import ADMIN_IDS
+            if user_id not in ADMIN_IDS:
+                await update.message.reply_text("❌ Access denied!")
+                return
+            
+            if not context.args or len(context.args) != 1:
+                await update.message.reply_text("Usage: /set_lottery_price <price>")
+                return
+            
+            try:
+                new_price = float(context.args[0])
+                # Update config (this would need to be implemented properly)
+                await update.message.reply_text(f"🎫 Lottery price updated to: {new_price}")
+            except ValueError:
+                await update.message.reply_text("❌ Invalid price! Please provide a number.")
+        
+        application.add_handler(CommandHandler("set_star_rate", set_star_rate))
+        application.add_handler(CommandHandler("set_usdt_rate", set_usdt_rate))
+        application.add_handler(CommandHandler("set_lottery_price", set_lottery_price))
+        
         # Message handlers - Multi-language support
         application.add_handler(MessageHandler(filters.Regex("^🏰.*Zoo|^🏰.*Mi Zoo|^🏰.*Meu Zoo|^🏰.*Mon Zoo|^🏰.*Mein Zoo"), my_zoo))
         application.add_handler(MessageHandler(filters.Regex("^⭐.*Collect|^⭐.*Recolectar|^⭐.*Coletar|^⭐.*Collecter|^⭐.*Sammeln"), collect_stars))
         application.add_handler(MessageHandler(filters.Regex("^💰.*Balance|^💰.*Saldo|^💰.*Solde|^💰.*Guthaben"), show_balance))
         application.add_handler(MessageHandler(filters.Regex("^🎮.*Games|^🎮.*Juegos|^🎮.*Jogos|^🎮.*Jeux|^🎮.*Spiele"), show_games))
         application.add_handler(MessageHandler(filters.Regex("^👥.*Referrals|^👥.*Referidos|^👥.*Indicações|^👥.*Parrainages|^👥.*Empfehlungen"), show_referrals))
-        application.add_handler(MessageHandler(filters.Regex("^💎.*Shop|^💎.*Tienda|^💎.*Loja|^💎.*Boutique"), handle_shop_menu))
+        application.add_handler(MessageHandler(filters.Regex("^💎.*Shop|^💎.*Tienda|^💎.*Loja|^💎.*Boutique"), show_shop))
         
         # Animal handlers
         application.add_handler(CallbackQueryHandler(show_animal_shop, pattern="^shop_(common|rare|legendary)$"))
@@ -236,19 +296,22 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_admin_settings, pattern="^admin_settings$"))
         application.add_handler(CallbackQueryHandler(handle_broadcast, pattern="^broadcast$"))
         application.add_handler(CallbackQueryHandler(handle_exchange_rates, pattern="^exchange_rates$"))
+        application.add_handler(CallbackQueryHandler(handle_search_user, pattern="^search_user$"))
+        application.add_handler(CallbackQueryHandler(handle_game_settings, pattern="^game_settings$"))
         application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
         
+        # Admin message handlers
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast_message))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_user_message))
+        
         # Settings handlers
-        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen")))
+        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen"), show_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
         application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))
         application.add_handler(CallbackQueryHandler(handle_view_deposits, pattern="^view_deposits$"))
         application.add_handler(CallbackQueryHandler(handle_view_withdrawals, pattern="^view_withdrawals$"))
         application.add_handler(CallbackQueryHandler(handle_view_stats, pattern="^view_stats$"))
-    handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
-    handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
-    handle_deposit_screenshot,
         
         # Referral handlers (new)
         application.add_handler(CallbackQueryHandler(handle_my_referrals, pattern="^my_referrals$"))

@@ -543,58 +543,51 @@ async def handle_deposit_network(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     
-    user_id = query.from_user.id
-    network = query.data.split('_')[1:]  # Extract network info
+    network = query.data.split("_")[1:]  # Get network type
+    network_name = "_".join(network)
     
-    # Define network addresses
+    # Define addresses for each network
     addresses = {
-        'usdt_trc20': 'TDWc9hxjqsmjZQbxKUkCCsL7NvckPipNaM',
-        'usdt_bep20': '0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6',
-        'trx_bep20': '0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6',
-        'ton': 'EQAj7vKLbaWjaNbAuAKP1e1HwmdYZ2vJ2xtWU8qq3JafkfxF',
-        'stars': 'Telegram Stars - Contacta al administrador'
+        "usdt_trc20": "TDWc9hxjqsmjZQbxKUkCCsL7NvckPipNaM",
+        "usdt_bep20": "0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6",
+        "trx_bep20": "0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6",
+        "ton": "EQAj7vKLbaWjaNbAuAKP1e1HwmdYZ2vJ2xtWU8qq3JafkfxF",
+        "stars": "Contact admin for Telegram Stars deposit"
     }
     
-    network_key = '_'.join(network)
-    address = addresses.get(network_key, 'Dirección no encontrada')
+    address = addresses.get(network_name, "Address not found")
     
-    network_names = {
-        'usdt_trc20': 'USDT TRC20',
-        'usdt_bep20': 'USDT BEP20', 
-        'trx_bep20': 'TRX BEP20',
-        'ton': 'TON',
-        'stars': 'Telegram Stars'
+    network_display_names = {
+        "usdt_trc20": "USDT TRC20",
+        "usdt_bep20": "USDT BEP20",
+        "trx_bep20": "TRX BEP20",
+        "ton": "TON",
+        "stars": "Telegram Stars"
     }
     
-    network_name = network_names.get(network_key, 'Red desconocida')
+    display_name = network_display_names.get(network_name, "Unknown Network")
     
-    # Store the selected network for later use
-    context.user_data['deposit_network'] = network_key
-    context.user_data['deposit_address'] = address
+    deposit_text = f"""💳 {display_name} Deposit
     
-    deposit_text = f"""💳 **{network_name}**
+Debes realizar el pago a esta dirección:
 
-📍 **Dirección de pago:**
-`{address}`
+<code>{address}</code>
 
-💡 **Instrucciones:**
-1. Envía el pago a la dirección de arriba
-2. Mínimo: 1 USDT
-3. Después del pago, ingresa la cantidad depositada
+Mínimo de recarga: 1 USDT
 
-💰 **¿Cuánto vas a depositar?**
-Escribe solo el número (ejemplo: 10)"""
+Por favor, ingresa la cantidad que vas a depositar (solo números):"""
+    
+    context.user_data["deposit_network"] = network_name
+    context.user_data["deposit_address"] = address
+    context.user_data["waiting_for_amount"] = True
     
     await query.edit_message_text(
         deposit_text,
-        parse_mode='Markdown',
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Volver", callback_data="deposit")
+            InlineKeyboardButton("🔙 Back", callback_data="deposit_menu")
         ]])
     )
-    
-    # Set state to wait for amount
-    context.user_data['waiting_for_deposit_amount'] = True
 
 async def handle_deposit_completed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle when user confirms deposit is completed"""
@@ -616,7 +609,7 @@ Después de enviar la imagen, tu depósito será revisado por un administrador."
     )
     
     # Set state to wait for screenshot
-    context.user_data['waiting_for_deposit_screenshot'] = True
+    context.user_data['waiting_for_screenshot'] = True
 
 async def handle_deposit_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle deposit cancellation"""
@@ -628,7 +621,7 @@ async def handle_deposit_cancel(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop('deposit_address', None)
     context.user_data.pop('deposit_amount', None)
     context.user_data.pop('waiting_for_deposit_amount', None)
-    context.user_data.pop('waiting_for_deposit_screenshot', None)
+    context.user_data.pop('waiting_for_screenshot', None)
     
     await query.edit_message_text(
         "❌ Depósito cancelado.",
@@ -668,64 +661,7 @@ Minimum deposit: 1 USDT"""
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-async def handle_deposit_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle specific deposit network selection"""
-    query = update.callback_query
-    await query.answer()
-    
-    network = query.data.split("_")[1:]  # Get network type
-    network_name = "_".join(network)
-    
-    # Define addresses for each network
-    addresses = {
-        "usdt_trc20": "TDWc9hxjqsmjZQbxKUkCCsL7NvckPipNaM",
-        "usdt_bep20": "0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6",
-        "trx_bep20": "0x26d89897c4e452C7BD3a0B8Aa79dD84E516BD4c6",
-        "ton": "EQAj7vKLbaWjaNbAuAKP1e1HwmdYZ2vJ2xtWU8qq3JafkfxF",
-        "stars": "Contact admin for Telegram Stars deposit"
-    }
-    
-    address = addresses.get(network_name, "Address not found")
-    
-    deposit_text = f"""💳 {network_name.upper().replace("_", " ")} Deposit
-    
-Debes realizar el pago a esta dirección:
 
-<code>{address}</code>
-
-Mínimo de recarga: 1 USDT
-
-Por favor, ingresa la cantidad que vas a depositar (solo números):"""
-    
-    context.user_data["deposit_network"] = network_name
-    context.user_data["deposit_address"] = address
-    context.user_data["waiting_for_amount"] = True
-    
-    await query.edit_message_text(
-        deposit_text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back", callback_data="deposit_menu")
-        ]])
-    )
-
-
-async def handle_deposit_completed(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle when user confirms deposit completion"""
-    query = update.callback_query
-    await query.answer()
-    
-    user_id = query.from_user.id
-    user_data = await db.get_user(user_id)
-    
-    await query.edit_message_text(
-        "📸 Por favor, envía la captura de pantalla del pago para confirmar la recarga:",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Volver", callback_data="back_to_balance")
-        ]])
-    )
-    
-    context.user_data["waiting_for_screenshot"] = True
 
 async def handle_deposit_amount_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle deposit amount input"""
@@ -870,14 +806,14 @@ async def handle_approve_deposit(update: Update, context: ContextTypes.DEFAULT_T
     
     # Notify admin
     await query.edit_message_text(
-        f"✅ Deposit approved!\n\nUser: @{deposit.get(username, Unknown)}\nAmount: {deposit[amount]} USDT\nStatus: Completed"
+        f"✅ Deposit approved!\n\nUser: @{deposit.get('username', 'Unknown')}\nAmount: {deposit['amount']} USDT\nStatus: Completed"
     )
     
     # Notify user
     try:
         await context.bot.send_message(
             chat_id=deposit["user_id"],
-            text=f"✅ ¡Tu depósito de {deposit[amount]} USDT ha sido aprobado y añadido a tu cuenta!"
+            text=f"✅ ¡Tu depósito de {deposit['amount']} USDT ha sido aprobado y añadido a tu cuenta!"
         )
     except Exception as e:
         print(f"Error notifying user: {e}")
@@ -906,14 +842,14 @@ async def handle_reject_deposit(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Notify admin
     await query.edit_message_text(
-        f"❌ Deposit rejected!\n\nUser: @{deposit.get(username, Unknown)}\nAmount: {deposit[amount]} USDT\nStatus: Rejected"
+        f"❌ Deposit rejected!\n\nUser: @{deposit.get('username', 'Unknown')}\nAmount: {deposit['amount']} USDT\nStatus: Rejected"
     )
     
     # Notify user
     try:
         await context.bot.send_message(
             chat_id=deposit["user_id"],
-            text=f"❌ Tu depósito de {deposit[amount]} USDT ha sido rechazado. Por favor, contacta al administrador si tienes dudas."
+            text=f"❌ Tu depósito de {deposit['amount']} USDT ha sido rechazado. Por favor, contacta al administrador si tienes dudas."
         )
     except Exception as e:
         print(f"Error notifying user: {e}")

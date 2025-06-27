@@ -45,7 +45,7 @@ from src.handlers.callbacks import (
     handle_my_referrals, handle_referral_earnings, handle_diamond_purchase,
     handle_set_withdrawal_address, handle_back_to_shop, handle_back_to_balance,
     handle_back_to_settings, handle_view_deposits, handle_view_withdrawals,
-    handle_view_stats
+    handle_view_stats,
     handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
     handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
     handle_deposit_screenshot,

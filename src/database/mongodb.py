@@ -95,8 +95,18 @@ class MongoDB:
     async def connect(self):
         if MOCK_DATA:
             return await self.mock_db.connect()
-        # Real MongoDB connection would go here
-        return False
+        
+        try:
+            from motor.motor_asyncio import AsyncIOMotorClient
+            from src.config import MONGODB_URI, DB_NAME
+            
+            self.client = AsyncIOMotorClient(MONGODB_URI)
+            self.db = self.client[DB_NAME]
+            await self.client.admin.command('ping')
+            return True
+        except Exception as e:
+            print(f"MongoDB connection error: {e}")
+            return False
 
     async def close(self):
         if MOCK_DATA:
@@ -107,21 +117,43 @@ class MongoDB:
     async def get_user(self, user_id: int):
         if MOCK_DATA:
             return await self.mock_db.get_user(user_id)
-        return None
+        return await self.db.users.find_one({"user_id": user_id})
+
+    async def create_user(self, user_data: Dict):
+        if MOCK_DATA:
+            return await self.mock_db.create_user(user_data)
+        result = await self.db.users.insert_one(user_data)
+        return result.inserted_id is not None
 
     async def add_animal(self, user_id: int, animal: Dict):
         if MOCK_DATA:
             return await self.mock_db.add_animal(user_id, animal)
-        return False
+        result = await self.db.users.update_one(
+            {"user_id": user_id},
+            {"$push": {"animals": animal}}
+        )
+        return result.modified_count > 0
 
     async def update_user_balance(self, user_id: int, field: str, amount: float):
         if MOCK_DATA:
             return await self.mock_db.update_user_balance(user_id, field, amount)
-        return False
+        result = await self.db.users.update_one(
+            {"user_id": user_id},
+            {"$inc": {field: amount}}
+        )
+        return result.modified_count > 0
+
+    async def find(self, collection: str, query: Dict = None) -> List[Dict]:
+        if MOCK_DATA:
+            return await self.mock_db.find(collection, query)
+        cursor = self.db[collection].find(query or {})
+        return await cursor.to_list(length=None)
 
     def __getattr__(self, name):
         if MOCK_DATA:
             return getattr(self.mock_db, name)
+        if hasattr(self.db, name):
+            return getattr(self.db, name)
         raise AttributeError(f"'{self.__class__.__name__}' has no attribute '{name}'")
 
 db = MongoDB()

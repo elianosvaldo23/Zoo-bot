@@ -5,16 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Test Mode Configuration
-TEST_MODE = True  # Enable test mode when no real bot token is available
+TEST_MODE = False  # Disabled test mode for production
 
 # Bot Configuration
-BOT_TOKEN = os.getenv('BOT_TOKEN', 'test_token' if TEST_MODE else None)
-ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS', '123456789').split(',')))
+BOT_TOKEN = "7969264149:AAG9ZdgM1ztZEAcxEc37o3QstfR8xgQjhi8"
+ADMIN_IDS = [1742433244]
 
-# MongoDB Configuration - Use mock data
-MOCK_DATA = True  # Enable mock data mode
-MONGODB_URI = None  # Will use mock data instead
-DB_NAME = 'zoo_bot_test'
+# MongoDB Configuration
+MOCK_DATA = False  # Disabled mock data for production
+MONGODB_URI = "mongodb+srv://zoobot:zoobot@zoolbot.6avd6qf.mongodb.net/zoolbot?retryWrites=true&w=majority&appName=Zoolbot"
+DB_NAME = 'zoolbot'
 
 # Game Constants
 STARS_TO_MONEY_RATE = 1  # 1 🌟 = 1 💰

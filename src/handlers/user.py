@@ -62,17 +62,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Existing user - get their language preference
     user_language = user_data.get('language', 'en')
     
-    welcome_text = f"""
-🎉 {lang_manager.get_text('welcome', user_language).split('!')[0]}!, {user.first_name}!
-
-🏰 Build your virtual zoo
-⭐ Collect stars from your animals
-💰 Earn money and convert to USDT
-🎮 Play games and win prizes
-👥 Invite friends and earn bonuses
-
-Choose an option from the menu below:
-"""
+    welcome_text = lang_manager.get_text('welcome_menu', user_language)
     
     await update.message.reply_text(
         welcome_text,
@@ -163,7 +153,7 @@ async def show_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     referrals = await db.find('users', {"referrer_id": user.id})
     referral_count = len(referrals)
     referral_earnings = user_data.get('referral_earnings', 0)
-    referral_link = f"https://t.me/your_bot_username?start={user.id}"
+    referral_link = f"https://t.me/Zoote_bot?start={user.id}"
     
     ref_text = lang_manager.get_text(
         'referral_stats', 

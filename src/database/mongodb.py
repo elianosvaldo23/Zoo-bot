@@ -94,6 +94,31 @@ class MockDB:
             del collection_data[key]
         return len(to_delete)
 
+    async def count(self, collection: str, query: Dict = None) -> int:
+        collection_data = getattr(self, collection, {})
+        if not query:
+            return len(collection_data)
+        
+        count = 0
+        for item in collection_data.values():
+            if all(item.get(k) == v for k, v in query.items()):
+                count += 1
+        return count
+
+    async def create_transaction(self, transaction_data: Dict):
+        transaction_id = transaction_data.get('id', str(len(self.transactions)))
+        self.transactions[transaction_id] = transaction_data
+        return True
+
+    async def get_transaction(self, transaction_id: str):
+        return self.transactions.get(transaction_id)
+
+    async def update_transaction(self, transaction_id: str, status: str):
+        if transaction_id in self.transactions:
+            self.transactions[transaction_id]['status'] = status
+            return True
+        return False
+
 class MongoDB:
     def __init__(self):
         self.mock_db = MockDB() if MOCK_DATA else None
@@ -157,11 +182,51 @@ class MongoDB:
         )
         return result.modified_count > 0
 
-    async def find(self, collection: str, query: Dict = None) -> List[Dict]:
+    async def find(self, collection: str, query: Dict = None, skip: int = 0, limit: int = 0, sort: List = None) -> List[Dict]:
         if MOCK_DATA:
             return await self.mock_db.find(collection, query)
         cursor = self.db[collection].find(query or {})
+        if skip > 0:
+            cursor = cursor.skip(skip)
+        if limit > 0:
+            cursor = cursor.limit(limit)
+        if sort:
+            cursor = cursor.sort(sort)
         return await cursor.to_list(length=None)
+
+    async def count(self, collection: str, query: Dict = None) -> int:
+        if MOCK_DATA:
+            return await self.mock_db.count(collection, query)
+        return await self.db[collection].count_documents(query or {})
+
+    async def update_user(self, user_id: int, update_data: Dict):
+        if MOCK_DATA:
+            return await self.mock_db.update_user(user_id, update_data)
+        result = await self.db.users.update_one(
+            {"user_id": user_id},
+            {"$set": update_data}
+        )
+        return result.modified_count > 0
+
+    async def create_transaction(self, transaction_data: Dict):
+        if MOCK_DATA:
+            return await self.mock_db.create_transaction(transaction_data)
+        result = await self.db.transactions.insert_one(transaction_data)
+        return result.inserted_id is not None
+
+    async def get_transaction(self, transaction_id: str):
+        if MOCK_DATA:
+            return await self.mock_db.get_transaction(transaction_id)
+        return await self.db.transactions.find_one({"id": transaction_id})
+
+    async def update_transaction(self, transaction_id: str, status: str):
+        if MOCK_DATA:
+            return await self.mock_db.update_transaction(transaction_id, status)
+        result = await self.db.transactions.update_one(
+            {"id": transaction_id},
+            {"$set": {"status": status}}
+        )
+        return result.modified_count > 0
 
     def __getattr__(self, name):
         if MOCK_DATA:

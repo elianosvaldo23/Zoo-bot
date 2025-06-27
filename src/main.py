@@ -236,7 +236,7 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
         
         # Settings handlers
-        application.add_handler(MessageHandler(filters.Regex("^⚙️"), handle_settings))
+        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações"), handle_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
         application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))

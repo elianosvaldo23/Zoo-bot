@@ -16,9 +16,22 @@ def main_menu_keyboard(language='en'):
     keyboard = [
         [lang_manager.get_text('my_zoo', language), lang_manager.get_text('collect_stars', language)],
         [lang_manager.get_text('balance', language), lang_manager.get_text('shop', language)],
-        [lang_manager.get_text('games', language), lang_manager.get_text('referrals', language)]
+        [lang_manager.get_text('games', language), lang_manager.get_text('referrals', language)],
+        [lang_manager.get_text('settings', language)]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def settings_keyboard(language='en'):
+    from src.utils.language import lang_manager
+    keyboard = [
+        [InlineKeyboardButton(lang_manager.get_text('change_language', language), callback_data="change_language")],
+        [InlineKeyboardButton(lang_manager.get_text('withdrawal_address', language), callback_data="set_withdrawal_address")],
+        [InlineKeyboardButton(lang_manager.get_text('view_deposits', language), callback_data="view_deposits")],
+        [InlineKeyboardButton(lang_manager.get_text('view_withdrawals', language), callback_data="view_withdrawals")],
+        [InlineKeyboardButton(lang_manager.get_text('view_stats', language), callback_data="view_stats")],
+        [InlineKeyboardButton(lang_manager.get_text('back', language), callback_data="back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 def my_zoo_keyboard(animals):
     keyboard = []
@@ -32,13 +45,14 @@ def my_zoo_keyboard(animals):
     keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
     return InlineKeyboardMarkup(keyboard)
 
-def shop_keyboard():
+def shop_keyboard(language='en'):
+    from src.utils.language import lang_manager
     keyboard = [
-        [InlineKeyboardButton("🦁 Common Animals", callback_data="shop_common")],
-        [InlineKeyboardButton("🐼 Rare Animals", callback_data="shop_rare")],
-        [InlineKeyboardButton("🐉 Legendary Animals", callback_data="shop_legendary")],
-        [InlineKeyboardButton("💎 Buy Diamonds", callback_data="buy_diamonds")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
+        [InlineKeyboardButton(lang_manager.get_text('common_animals', language), callback_data="shop_common")],
+        [InlineKeyboardButton(lang_manager.get_text('rare_animals', language), callback_data="shop_rare")],
+        [InlineKeyboardButton(lang_manager.get_text('legendary_animals', language), callback_data="shop_legendary")],
+        [InlineKeyboardButton(lang_manager.get_text('buy_diamonds', language), callback_data="buy_diamonds")],
+        [InlineKeyboardButton(lang_manager.get_text('back', language), callback_data="back_to_main")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

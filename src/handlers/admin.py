@@ -1,7 +1,7 @@
 
 import os
 import sys
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 # Add the project root to Python path
@@ -170,3 +170,144 @@ async def handle_transaction(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await handle_deposits(update, context)
     else:
         await handle_withdrawals(update, context)
+
+async def handle_user_management(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user management menu"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    await update.callback_query.edit_message_text(
+        "👥 User Management\n\nChoose an option:",
+        reply_markup=user_management_keyboard()
+    )
+
+async def handle_view_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle view all users"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    page = context.user_data.get('users_page', 1)
+    users = await db.find('users', {}, skip=(page-1)*10, limit=10)
+    total_users = await db.count('users', {})
+    total_pages = (total_users + 9) // 10
+    
+    if not users:
+        await update.callback_query.edit_message_text(
+            "No users found!",
+            reply_markup=user_management_keyboard()
+        )
+        return
+    
+    users_text = f"👥 Users (Page {page}/{total_pages}):\n\n"
+    for user in users:
+        status = "🟢 Active" if user.get('status', 'active') == 'active' else "🔴 Banned"
+        users_text += (
+            f"ID: {user['user_id']}\n"
+            f"Username: @{user.get('username', 'N/A')}\n"
+            f"Name: {user.get('first_name', 'N/A')}\n"
+            f"Status: {status}\n"
+            f"Balance: 💰{user.get('balance_money', 0)} | 💎{user.get('balance_diamonds', 0)} | 💵{user.get('balance_usdt', 0)}\n\n"
+        )
+    
+    await update.callback_query.edit_message_text(
+        users_text,
+        reply_markup=pagination_keyboard(page, total_pages, "users_page")
+    )
+
+async def handle_admin_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle admin settings menu"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    await update.callback_query.edit_message_text(
+        "⚙️ Admin Settings\n\nChoose an option:",
+        reply_markup=settings_keyboard()
+    )
+
+async def handle_user_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user statistics"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    # Get detailed statistics
+    total_users = await db.count('users', {})
+    active_users = await db.count('users', {"status": {"$ne": "banned"}})
+    banned_users = await db.count('users', {"status": "banned"})
+    
+    # Get users with referrals
+    users_with_referrals = await db.count('users', {"referrer_id": {"$exists": True}})
+    
+    # Get top users by balance
+    top_users = await db.find('users', {}, sort=[("balance_usdt", -1)], limit=5)
+    
+    stats_text = (
+        "📊 User Statistics:\n\n"
+        f"👥 Total Users: {total_users}\n"
+        f"🟢 Active Users: {active_users}\n"
+        f"🔴 Banned Users: {banned_users}\n"
+        f"👥 Users with Referrals: {users_with_referrals}\n\n"
+        "🏆 Top Users by USDT:\n"
+    )
+    
+    for i, user in enumerate(top_users, 1):
+        stats_text += f"{i}. @{user.get('username', 'N/A')} - 💵{user.get('balance_usdt', 0)}\n"
+    
+    await update.callback_query.edit_message_text(
+        stats_text,
+        reply_markup=user_management_keyboard()
+    )
+
+async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast message"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    context.user_data['broadcasting'] = True
+    
+    await update.callback_query.edit_message_text(
+        "📢 Broadcast Message\n\nSend the message you want to broadcast to all users:",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Cancel", callback_data="back_to_settings")
+        ]])
+    )
+
+async def handle_exchange_rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle exchange rates settings"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    from src.config import STARS_TO_MONEY_RATE, MONEY_TO_USDT_RATE
+    
+    rates_text = (
+        "💱 Current Exchange Rates:\n\n"
+        f"⭐ Stars to Money: 1 ⭐ = {STARS_TO_MONEY_RATE} 💰\n"
+        f"💰 Money to USDT: {MONEY_TO_USDT_RATE} 💰 = 1 💵\n\n"
+        "Use /set_star_rate <rate> to change star rate\n"
+        "Use /set_usdt_rate <rate> to change USDT rate"
+    )
+    
+    await update.callback_query.edit_message_text(
+        rates_text,
+        reply_markup=settings_keyboard()
+    )
+
+async def handle_back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle back to admin menu"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
+    
+    await admin_menu(update, context)

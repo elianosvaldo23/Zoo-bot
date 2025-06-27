@@ -153,22 +153,23 @@ async def startup():
         logger.error(f"Error during startup: {str(e)}")
         return False
 
-async def main():
-    application = None
-    try:
-        logger.info("Starting Zoo Bot")
-        
-        # Initialize database
-        if not await startup():
-            logger.error("Failed to initialize. Exiting...")
-            return
-        
-        # Initialize bot
-        if TEST_MODE:
-            application = TestApplication()
-            logger.info("Running in TEST MODE")
-        else:
-            application = Application.builder().token(BOT_TOKEN).build()
+def main():
+    """Main function to run the bot"""
+    logger.info("Starting Zoo Bot")
+    
+    # Initialize bot
+    if TEST_MODE:
+        logger.info("Running in TEST MODE")
+        # For test mode, just run a simple loop
+        try:
+            asyncio.run(test_mode_main())
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
+        except Exception as e:
+            logger.error(f"Bot stopped due to error: {str(e)}")
+    else:
+        # Production mode
+        application = Application.builder().token(BOT_TOKEN).build()
         
         # Register handlers
         application.add_handler(CommandHandler("start", start))
@@ -207,38 +208,34 @@ async def main():
         
         logger.info("Bot is ready to handle updates")
         
-        # Start the bot
-        await application.initialize()
-        await application.start()
-        await application.run_polling(allowed_updates=Update.ALL_TYPES)
-        
-    except Exception as e:
-        logger.error(f"Critical error: {str(e)}")
-    finally:
-        if application:
+        # Initialize database before starting
+        async def init_and_run():
             try:
-                await application.stop()
-                await db.close()
+                if not await startup():
+                    logger.error("Failed to initialize database. Exiting...")
+                    return
+                logger.info("Database initialized successfully")
             except Exception as e:
-                logger.error(f"Error during shutdown: {str(e)}")
+                logger.error(f"Database initialization failed: {str(e)}")
+                return
+        
+        # Run database initialization
+        asyncio.run(init_and_run())
+        
+        # Start the bot using run_polling which handles the event loop properly
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-def run_bot():
-    """Run the bot with proper event loop handling"""
-    try:
-        # Check if there's already a running event loop
-        try:
-            loop = asyncio.get_running_loop()
-            logger.warning("Event loop already running, creating new task")
-            # If we're in an existing loop, create a task
-            task = loop.create_task(main())
-            return task
-        except RuntimeError:
-            # No running loop, safe to use asyncio.run()
-            asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.error(f"Bot stopped due to error: {str(e)}")
+async def test_mode_main():
+    """Test mode main function"""
+    application = TestApplication()
+    
+    if not await startup():
+        logger.error("Failed to initialize. Exiting...")
+        return
+    
+    await application.initialize()
+    await application.start()
+    await application.run_polling()
 
 if __name__ == "__main__":
-    run_bot()
+    main()

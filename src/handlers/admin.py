@@ -18,17 +18,11 @@ from src.keyboards.admin_kb import (
 from src.config import ADMIN_IDS
 from src.utils.helpers import format_balance
 
-async def admin_required(func):
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        if user_id not in ADMIN_IDS:
-            await update.message.reply_text("❌ Access denied!")
-            return
-        return await func(update, context)
-    return wrapper
-
-@admin_required
 async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Access denied! You are not authorized to use admin commands.")
+        return
     stats = await get_system_stats()
     
     menu_text = (
@@ -47,8 +41,11 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=admin_menu_keyboard()
     )
 
-@admin_required
 async def handle_deposits(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
     page = context.user_data.get('deposit_page', 1)
     pending_deposits = await db.db.transactions.find(
         {"type": "deposit", "status": "pending"}
@@ -81,8 +78,11 @@ async def handle_deposits(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=pagination_keyboard(page, total_pages, "deposits_page")
     )
 
-@admin_required
 async def handle_withdrawals(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
     page = context.user_data.get('withdrawal_page', 1)
     pending_withdrawals = await db.db.transactions.find(
         {"type": "withdrawal", "status": "pending"}
@@ -138,8 +138,11 @@ async def get_system_stats():
         "total_usdt": 0
     }
 
-@admin_required
 async def handle_transaction(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.callback_query.answer("❌ Access denied!")
+        return
     query = update.callback_query
     action, transaction_id = query.data.split('_', 1)
     

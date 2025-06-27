@@ -13,13 +13,14 @@ if project_root not in sys.path:
 from src.database.mongodb import db
 from src.keyboards.user_kb import (
     main_menu_keyboard, my_zoo_keyboard, shop_keyboard,
-    games_keyboard, balance_keyboard, referral_keyboard
+    games_keyboard, balance_keyboard, referral_keyboard, language_selection_keyboard
 )
 from src.config import STARS_TO_MONEY_RATE, MONEY_TO_USDT_RATE, REFERRAL_BONUS
 from src.utils.helpers import (
     calculate_stars_earned, format_balance,
     format_referral_link, parse_referral_code
 )
+from src.utils.language import lang_manager
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -42,28 +43,40 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "referrer_id": referrer_id,
             "referral_earnings": 0,
             "last_collection": datetime.utcnow(),
-            "joined_date": datetime.utcnow()
+            "joined_date": datetime.utcnow(),
+            "language": "en"  # Default language
         }
         await db.create_user(new_user)
         
         # Give referral bonus if applicable
         if referrer_id:
             await db.update_user_balance(referrer_id, "balance_money", REFERRAL_BONUS)
-            
-        welcome_msg = (
-            f"🎉 Welcome to the Zoo Game, {user.first_name}!\n\n"
-            "🦁 Collect animals, earn stars, and compete with other players!\n"
-            "⭐ Your animals generate stars every hour\n"
-            "💰 Convert stars to money\n"
-            "💎 Use diamonds to buy rare animals\n\n"
-            "Let's get started! Use the menu below:"
+        
+        # Show language selection for new users
+        await update.message.reply_text(
+            lang_manager.get_text('welcome'),
+            reply_markup=language_selection_keyboard()
         )
-    else:
-        welcome_msg = f"Welcome back, {user.first_name}! 🎮"
+        return
+    
+    # Existing user - get their language preference
+    user_language = user_data.get('language', 'en')
+    
+    welcome_text = f"""
+🎉 {lang_manager.get_text('welcome', user_language).split('!')[0]}!, {user.first_name}!
+
+🏰 Build your virtual zoo
+⭐ Collect stars from your animals
+💰 Earn money and convert to USDT
+🎮 Play games and win prizes
+👥 Invite friends and earn bonuses
+
+Choose an option from the menu below:
+"""
     
     await update.message.reply_text(
-        welcome_msg,
-        reply_markup=main_menu_keyboard()
+        welcome_text,
+        reply_markup=main_menu_keyboard(user_language)
     )
 
 async def my_zoo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,42 +135,45 @@ async def collect_stars(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = await db.get_user(user.id)
+    user_language = user_data.get('language', 'en')
     
-    balance_msg = (
-        f"💰 Your Balance:\n\n"
-        f"⭐ Stars: {format_balance(user_data['balance_stars'])}\n"
-        f"💰 Money: {format_balance(user_data['balance_money'])}\n"
-        f"💎 Diamonds: {format_balance(user_data['balance_diamonds'])}\n"
-        f"💵 USDT: {format_balance(user_data['balance_usdt'])}\n\n"
-        f"Exchange Rates:\n"
-        f"1 ⭐ = {STARS_TO_MONEY_RATE} 💰\n"
-        f"{MONEY_TO_USDT_RATE} 💰 = 1 USDT"
+    balance_text = lang_manager.get_text(
+        'your_balance', 
+        user_language,
+        money=format_balance(user_data['balance_money']),
+        stars=format_balance(user_data['balance_stars']),
+        diamonds=format_balance(user_data['balance_diamonds']),
+        usdt=format_balance(user_data['balance_usdt'])
     )
     
+    balance_text += f"\n\n{lang_manager.get_text('conversion_rate', user_language, rate=f'1 ⭐ = {STARS_TO_MONEY_RATE} 💰')}"
+    balance_text += f"\n{lang_manager.get_text('conversion_rate', user_language, rate=f'{MONEY_TO_USDT_RATE} 💰 = 1 💵')}"
+    
     await update.message.reply_text(
-        balance_msg,
+        balance_text,
         reply_markup=balance_keyboard()
     )
 
 async def show_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = await db.get_user(user.id)
-    referrals = await db.get_referrals(user.id)
+    user_language = user_data.get('language', 'en')
     
-    ref_msg = (
-        f"👥 Your Referral Stats:\n\n"
-        f"Total Referrals: {len(referrals)}\n"
-        f"Earnings: {format_balance(user_data['referral_earnings'])} 💰\n\n"
-        f"Your Referral Link:\n"
-        f"{format_referral_link(context.bot.username, user.id)}\n\n"
-        f"Share this link with friends and earn:\n"
-        f"• {REFERRAL_BONUS} 💰 for each new user\n"
-        f"• 10% of their first deposit (1st level)\n"
-        f"• 3% from 2nd level referrals\n"
-        f"• 1% from 3rd level referrals"
+    # Get referral count
+    referrals = await db.find('users', {"referrer_id": user.id})
+    referral_count = len(referrals)
+    referral_earnings = user_data.get('referral_earnings', 0)
+    referral_link = f"https://t.me/your_bot_username?start={user.id}"
+    
+    ref_text = lang_manager.get_text(
+        'referral_stats', 
+        user_language,
+        link=referral_link,
+        count=referral_count,
+        earnings=referral_earnings
     )
     
     await update.message.reply_text(
-        ref_msg,
+        ref_text,
         reply_markup=referral_keyboard()
     )

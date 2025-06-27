@@ -36,6 +36,11 @@ from src.handlers.animals import (
 from src.handlers.referral import (
     show_referral_stats, copy_referral_link
 )
+from src.handlers.callbacks import (
+    handle_language_selection, handle_convert_stars, handle_convert_money,
+    handle_buy_diamonds, handle_withdraw, handle_back_to_main,
+    handle_referrals, handle_shop_menu
+)
 
 # Configure logging to both file and console
 logging.basicConfig(
@@ -175,12 +180,13 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("admin", admin_menu))
         
-        # Message handlers
-        application.add_handler(MessageHandler(filters.Regex("^🏰 My Zoo$"), my_zoo))
-        application.add_handler(MessageHandler(filters.Regex("^⭐ Collect Stars$"), collect_stars))
-        application.add_handler(MessageHandler(filters.Regex("^💰 Balance$"), show_balance))
-        application.add_handler(MessageHandler(filters.Regex("^🎮 Games$"), show_games))
-        application.add_handler(MessageHandler(filters.Regex("^👥 Referrals$"), show_referrals))
+        # Message handlers - Multi-language support
+        application.add_handler(MessageHandler(filters.Regex("^🏰"), my_zoo))
+        application.add_handler(MessageHandler(filters.Regex("^⭐"), collect_stars))
+        application.add_handler(MessageHandler(filters.Regex("^💰"), show_balance))
+        application.add_handler(MessageHandler(filters.Regex("^🎮"), show_games))
+        application.add_handler(MessageHandler(filters.Regex("^👥"), show_referrals))
+        application.add_handler(MessageHandler(filters.Regex("^💎"), handle_shop_menu))
         
         # Animal handlers
         application.add_handler(CallbackQueryHandler(show_animal_shop, pattern="^shop_(common|rare|legendary)$"))
@@ -196,6 +202,20 @@ def main():
         # Referral handlers
         application.add_handler(CallbackQueryHandler(show_referral_stats, pattern="^show_referrals$"))
         application.add_handler(CallbackQueryHandler(copy_referral_link, pattern="^copy_ref_link$"))
+        
+        # Language handlers
+        application.add_handler(CallbackQueryHandler(handle_language_selection, pattern="^lang_.*$"))
+        
+        # Balance/Conversion handlers
+        application.add_handler(CallbackQueryHandler(handle_convert_stars, pattern="^convert_stars$"))
+        application.add_handler(CallbackQueryHandler(handle_convert_money, pattern="^convert_money$"))
+        application.add_handler(CallbackQueryHandler(handle_buy_diamonds, pattern="^buy_diamonds$"))
+        application.add_handler(CallbackQueryHandler(handle_withdraw, pattern="^withdraw$"))
+        
+        # Navigation handlers
+        application.add_handler(CallbackQueryHandler(handle_back_to_main, pattern="^back_to_main$"))
+        application.add_handler(CallbackQueryHandler(handle_referrals, pattern="^referrals$"))
+        application.add_handler(CallbackQueryHandler(handle_shop_menu, pattern="^shop$"))
         
         # Admin handlers
         application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))

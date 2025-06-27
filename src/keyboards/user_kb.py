@@ -1,11 +1,22 @@
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
-def main_menu_keyboard():
+def language_selection_keyboard():
     keyboard = [
-        ['🏰 My Zoo', '⭐ Collect Stars'],
-        ['💰 Balance', '💎 Shop'],
-        ['🎮 Games', '👥 Referrals']
+        [InlineKeyboardButton("🇺🇸 English", callback_data="lang_en")],
+        [InlineKeyboardButton("🇪🇸 Español", callback_data="lang_es")],
+        [InlineKeyboardButton("🇧🇷 Português", callback_data="lang_pt")],
+        [InlineKeyboardButton("🇫🇷 Français", callback_data="lang_fr")],
+        [InlineKeyboardButton("🇩🇪 Deutsch", callback_data="lang_de")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def main_menu_keyboard(language='en'):
+    from src.utils.language import lang_manager
+    keyboard = [
+        [lang_manager.get_text('my_zoo', language), lang_manager.get_text('collect_stars', language)],
+        [lang_manager.get_text('balance', language), lang_manager.get_text('shop', language)],
+        [lang_manager.get_text('games', language), lang_manager.get_text('referrals', language)]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 

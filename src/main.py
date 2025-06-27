@@ -28,7 +28,9 @@ from src.handlers.games import (
 )
 from src.handlers.admin import (
     admin_menu, handle_deposits, handle_withdrawals,
-    handle_transaction
+    handle_transaction, handle_user_management, handle_view_users,
+    handle_user_stats, handle_admin_settings, handle_broadcast,
+    handle_exchange_rates, handle_back_to_admin
 )
 from src.handlers.animals import (
     buy_animal, show_animal_shop
@@ -39,7 +41,11 @@ from src.handlers.referral import (
 from src.handlers.callbacks import (
     handle_language_selection, handle_convert_stars, handle_convert_money,
     handle_buy_diamonds, handle_withdraw, handle_back_to_main,
-    handle_referrals, handle_shop_menu
+    handle_referrals, handle_shop_menu, handle_settings, handle_change_language,
+    handle_my_referrals, handle_referral_earnings, handle_diamond_purchase,
+    handle_set_withdrawal_address, handle_back_to_shop, handle_back_to_balance,
+    handle_back_to_settings, handle_view_deposits, handle_view_withdrawals,
+    handle_view_stats
 )
 
 # Configure logging to both file and console
@@ -221,6 +227,34 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))
         application.add_handler(CallbackQueryHandler(handle_withdrawals, pattern="^admin_withdrawals$"))
         application.add_handler(CallbackQueryHandler(handle_transaction, pattern="^(approve|reject)_.*$"))
+        application.add_handler(CallbackQueryHandler(handle_user_management, pattern="^admin_users$"))
+        application.add_handler(CallbackQueryHandler(handle_view_users, pattern="^view_users$"))
+        application.add_handler(CallbackQueryHandler(handle_user_stats, pattern="^user_stats$"))
+        application.add_handler(CallbackQueryHandler(handle_admin_settings, pattern="^admin_settings$"))
+        application.add_handler(CallbackQueryHandler(handle_broadcast, pattern="^broadcast$"))
+        application.add_handler(CallbackQueryHandler(handle_exchange_rates, pattern="^exchange_rates$"))
+        application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
+        
+        # Settings handlers
+        application.add_handler(MessageHandler(filters.Regex("^⚙️"), handle_settings))
+        application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
+        application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
+        application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))
+        application.add_handler(CallbackQueryHandler(handle_view_deposits, pattern="^view_deposits$"))
+        application.add_handler(CallbackQueryHandler(handle_view_withdrawals, pattern="^view_withdrawals$"))
+        application.add_handler(CallbackQueryHandler(handle_view_stats, pattern="^view_stats$"))
+        
+        # Referral handlers (new)
+        application.add_handler(CallbackQueryHandler(handle_my_referrals, pattern="^my_referrals$"))
+        application.add_handler(CallbackQueryHandler(handle_referral_earnings, pattern="^referral_earnings$"))
+        
+        # Diamond purchase handlers
+        application.add_handler(CallbackQueryHandler(handle_diamond_purchase, pattern="^buy_diamond_pkg_.*$"))
+        
+        # Navigation handlers (additional)
+        application.add_handler(CallbackQueryHandler(handle_back_to_shop, pattern="^back_to_shop$"))
+        application.add_handler(CallbackQueryHandler(handle_back_to_balance, pattern="^back_to_balance$"))
+        application.add_handler(CallbackQueryHandler(handle_back_to_settings, pattern="^back_to_settings$"))
         
         # Start background tasks
         application.job_queue.run_repeating(hourly_star_update, interval=3600)  # Run every hour

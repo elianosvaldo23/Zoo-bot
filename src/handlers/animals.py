@@ -1,7 +1,15 @@
 
+import os
+import sys
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.database.mongodb import db
 from src.keyboards.user_kb import confirm_purchase_keyboard
 from src.config import ANIMALS

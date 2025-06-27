@@ -1,8 +1,16 @@
 
+import os
+import sys
 from datetime import datetime
 import random
 from telegram import Update
 from telegram.ext import ContextTypes
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.database.mongodb import db
 from src.keyboards.user_kb import games_keyboard, battle_keyboard
 from src.utils.helpers import simulate_battle, play_dice, format_balance

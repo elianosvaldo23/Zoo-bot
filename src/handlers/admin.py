@@ -1,6 +1,14 @@
 
+import os
+import sys
 from telegram import Update
 from telegram.ext import ContextTypes
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.database.mongodb import db
 from src.keyboards.admin_kb import (
     admin_menu_keyboard, transaction_action_keyboard,

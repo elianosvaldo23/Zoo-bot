@@ -3,12 +3,19 @@ import asyncio
 import random
 import logging
 import sys
+import os
 from datetime import datetime, timedelta, time
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters
 )
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.config import BOT_TOKEN, LOTTERY_TICKET_PRICE, TEST_MODE, TEST_BOT
 from src.database.mongodb import db
 from src.handlers.user import (

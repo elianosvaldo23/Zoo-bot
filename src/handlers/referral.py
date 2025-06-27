@@ -1,7 +1,15 @@
 
+import os
+import sys
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.database.mongodb import db
 from src.config import REFERRAL_BONUS, REFERRAL_LEVELS
 from src.utils.helpers import format_balance, format_referral_link

@@ -108,6 +108,10 @@ class MongoDB:
             from motor.motor_asyncio import AsyncIOMotorClient
             from src.config import MONGODB_URI, DB_NAME
             
+            # Close existing connection if any
+            if self.client:
+                self.client.close()
+            
             self.client = AsyncIOMotorClient(MONGODB_URI)
             self.db = self.client[DB_NAME]
             await self.client.admin.command('ping')
@@ -121,6 +125,8 @@ class MongoDB:
             await self.mock_db.close()
         elif self.client:
             self.client.close()
+            self.client = None
+            self.db = None
 
     async def get_user(self, user_id: int):
         if MOCK_DATA:

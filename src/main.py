@@ -208,19 +208,23 @@ def main():
         
         logger.info("Bot is ready to handle updates")
         
-        # Initialize database before starting
-        async def init_and_run():
+        # Add startup callback to initialize database within the bot's event loop
+        async def post_init(application):
             try:
+                # Reinitialize database connection in the current event loop
+                await db.close()  # Close any existing connection
                 if not await startup():
                     logger.error("Failed to initialize database. Exiting...")
+                    await application.stop()
                     return
-                logger.info("Database initialized successfully")
+                logger.info("Database initialized successfully in bot's event loop")
             except Exception as e:
                 logger.error(f"Database initialization failed: {str(e)}")
+                await application.stop()
                 return
         
-        # Run database initialization
-        asyncio.run(init_and_run())
+        # Set the post_init callback
+        application.post_init = post_init
         
         # Ensure we have an event loop for run_polling
         try:

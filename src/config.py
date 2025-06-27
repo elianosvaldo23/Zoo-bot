@@ -4,13 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Bot Configuration
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS', '').split(',')))
+# Test Mode Configuration
+TEST_MODE = True  # Enable test mode when no real bot token is available
 
-# MongoDB Configuration
-MONGODB_URI = os.getenv('MONGODB_URI')
-DB_NAME = os.getenv('DB_NAME', 'zoo_bot')
+# Bot Configuration
+BOT_TOKEN = os.getenv('BOT_TOKEN', 'test_token' if TEST_MODE else None)
+ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS', '123456789').split(',')))
+
+# MongoDB Configuration - Use mock data
+MOCK_DATA = True  # Enable mock data mode
+MONGODB_URI = None  # Will use mock data instead
+DB_NAME = 'zoo_bot_test'
 
 # Game Constants
 STARS_TO_MONEY_RATE = 1  # 1 🌟 = 1 💰
@@ -46,3 +50,12 @@ ANIMALS = {
 # Game Settings
 MIN_BET_AMOUNT = 10  # Minimum 💎 for betting
 LOTTERY_TICKET_PRICE = 100  # 💰 per ticket
+
+# Test Mode Settings
+if TEST_MODE:
+    class TestBot:
+        async def send_message(self, chat_id, text, **kwargs):
+            print(f"[TEST] Sending message to {chat_id}: {text}")
+            return True
+
+    TEST_BOT = TestBot()

@@ -1,12 +1,15 @@
 
 import asyncio
 import random
-from datetime import datetime, timedelta
+import logging
+import sys
+from datetime import datetime, timedelta, time
+from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters
 )
-from src.config import BOT_TOKEN, LOTTERY_TICKET_PRICE
+from src.config import BOT_TOKEN, LOTTERY_TICKET_PRICE, TEST_MODE, TEST_BOT
 from src.database.mongodb import db
 from src.handlers.user import (
     start, my_zoo, collect_stars,
@@ -21,87 +24,184 @@ from src.handlers.admin import (
     handle_transaction
 )
 
-async def hourly_star_update():
-    while True:
-        # Update all users' star balances
-        users = await db.db.users.find({"animals": {"$exists": True, "$ne": []}}).to_list(length=None)
+# Configure logging to both file and console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('zoo_bot.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+class TestApplication:
+    def __init__(self):
+        self.bot = TEST_BOT
+        self.handlers = []
+        self.job_queue = self
+        self.running = False
+
+    async def initialize(self):
+        self.running = True
+        logger.info("[TEST] Application initialized")
+        return True
+
+    async def start(self):
+        logger.info("[TEST] Application started")
+        return True
+
+    async def stop(self):
+        self.running = False
+        logger.info("[TEST] Application stopped")
+        return True
+
+    def add_handler(self, handler):
+        self.handlers.append(handler)
+        logger.info(f"[TEST] Added handler: {handler}")
+
+    def run_repeating(self, callback, interval):
+        logger.info(f"[TEST] Scheduled repeating job: {callback.__name__} every {interval}s")
+        return True
+
+    def run_daily(self, callback, time):
+        logger.info(f"[TEST] Scheduled daily job: {callback.__name__} at {time}")
+        return True
+
+    async def run_polling(self, **kwargs):
+        logger.info("[TEST] Started polling")
+        while self.running:
+            await asyncio.sleep(1)
+        return True
+
+async def hourly_star_update(_):
+    try:
+        logger.info("Starting hourly star update")
+        users = await db.users.find({"animals": {"$exists": True, "$ne": []}})
         for user in users:
             stars_earned = 0
             for animal in user['animals']:
                 stars_earned += animal['stars_per_hour']
             
             if stars_earned > 0:
-                await db.update_user_balance(user['user_id'], "balance_stars", stars_earned)
+                await db.users.update_one(
+                    {"user_id": user['user_id']},
+                    {"$inc": {"balance_stars": stars_earned}}
+                )
+                logger.info(f"Updated stars for user {user['user_id']}: +{stars_earned}")
         
-        await asyncio.sleep(3600)  # Wait for 1 hour
+        logger.info("Completed hourly star update")
+    except Exception as e:
+        logger.error(f"Error in hourly star update: {str(e)}")
 
-async def daily_lottery_draw(app: Application):
-    while True:
+async def daily_lottery_draw(context):
+    try:
         now = datetime.utcnow()
         next_draw = now.replace(hour=0, minute=0, second=0, microsecond=0)
         if now >= next_draw:
             next_draw += timedelta(days=1)
         
-        await asyncio.sleep((next_draw - now).total_seconds())
-        
-        # Draw lottery
-        tickets = await db.db.lottery_tickets.find(
-            {"draw_date": next_draw}
-        ).to_list(length=None)
+        logger.info("Starting daily lottery draw")
+        tickets = await db.lottery_tickets.find({"draw_date": next_draw})
         
         if tickets:
             winner = random.choice(tickets)
             prize_pool = len(tickets) * LOTTERY_TICKET_PRICE
             
-            # Give prize to winner
-            await db.update_user_balance(winner['user_id'], "balance_money", prize_pool)
+            await db.users.update_one(
+                {"user_id": winner['user_id']},
+                {"$inc": {"balance_money": prize_pool}}
+            )
             
-            # Notify winner
-            user = await db.get_user(winner['user_id'])
-            await app.bot.send_message(
+            user = await db.users.find_one({"user_id": winner['user_id']})
+            await context.bot.send_message(
                 winner['user_id'],
                 f"🎉 Congratulations! You won the lottery!\n"
                 f"Prize: 💰 {prize_pool}"
             )
+            logger.info(f"Lottery winner: {winner['user_id']}, Prize: {prize_pool}")
         
-        # Clean up tickets
-        await db.db.lottery_tickets.delete_many({"draw_date": next_draw})
+        await db.lottery_tickets.delete_many({"draw_date": next_draw})
+        logger.info("Completed daily lottery draw")
+    except Exception as e:
+        logger.error(f"Error in daily lottery draw: {str(e)}")
 
-def main():
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Connect to database
-    asyncio.get_event_loop().run_until_complete(db.connect())
-    
-    # Command handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("admin", admin_menu))
-    
-    # Message handlers
-    application.add_handler(MessageHandler(filters.Regex("^🏰 My Zoo$"), my_zoo))
-    application.add_handler(MessageHandler(filters.Regex("^⭐ Collect Stars$"), collect_stars))
-    application.add_handler(MessageHandler(filters.Regex("^💰 Balance$"), show_balance))
-    application.add_handler(MessageHandler(filters.Regex("^🎮 Games$"), show_games))
-    application.add_handler(MessageHandler(filters.Regex("^👥 Referrals$"), show_referrals))
-    
-    # Callback query handlers
-    application.add_handler(CallbackQueryHandler(battle_setup, pattern="^game_battle$"))
-    application.add_handler(CallbackQueryHandler(adjust_bet, pattern="^(increase|decrease)_bet$"))
-    application.add_handler(CallbackQueryHandler(start_battle, pattern="^start_battle$"))
-    application.add_handler(CallbackQueryHandler(play_dice_game, pattern="^game_dice$"))
-    application.add_handler(CallbackQueryHandler(buy_lottery_ticket, pattern="^game_lottery$"))
-    
-    # Admin handlers
-    application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))
-    application.add_handler(CallbackQueryHandler(handle_withdrawals, pattern="^admin_withdrawals$"))
-    application.add_handler(CallbackQueryHandler(handle_transaction, pattern="^(approve|reject)_.*$"))
-    
-    # Start background tasks
-    application.job_queue.run_custom(hourly_star_update)
-    application.job_queue.run_custom(lambda _: daily_lottery_draw(application))
-    
-    # Start the bot
-    application.run_polling()
+async def startup():
+    try:
+        # Connect to database
+        await db.connect()
+        logger.info("Successfully connected to MongoDB")
+        
+        # Test database connection
+        await db.users.find_one({})
+        logger.info("Successfully tested MongoDB connection")
+        return True
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        return False
+
+async def main():
+    application = None
+    try:
+        logger.info("Starting Zoo Bot")
+        
+        # Initialize database
+        if not await startup():
+            logger.error("Failed to initialize. Exiting...")
+            return
+        
+        # Initialize bot
+        if TEST_MODE:
+            application = TestApplication()
+            logger.info("Running in TEST MODE")
+        else:
+            application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Register handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("admin", admin_menu))
+        
+        # Message handlers
+        application.add_handler(MessageHandler(filters.Regex("^🏰 My Zoo$"), my_zoo))
+        application.add_handler(MessageHandler(filters.Regex("^⭐ Collect Stars$"), collect_stars))
+        application.add_handler(MessageHandler(filters.Regex("^💰 Balance$"), show_balance))
+        application.add_handler(MessageHandler(filters.Regex("^🎮 Games$"), show_games))
+        application.add_handler(MessageHandler(filters.Regex("^👥 Referrals$"), show_referrals))
+        
+        # Callback query handlers
+        application.add_handler(CallbackQueryHandler(battle_setup, pattern="^game_battle$"))
+        application.add_handler(CallbackQueryHandler(adjust_bet, pattern="^(increase|decrease)_bet$"))
+        application.add_handler(CallbackQueryHandler(start_battle, pattern="^start_battle$"))
+        application.add_handler(CallbackQueryHandler(play_dice_game, pattern="^game_dice$"))
+        application.add_handler(CallbackQueryHandler(buy_lottery_ticket, pattern="^game_lottery$"))
+        
+        # Admin handlers
+        application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))
+        application.add_handler(CallbackQueryHandler(handle_withdrawals, pattern="^admin_withdrawals$"))
+        application.add_handler(CallbackQueryHandler(handle_transaction, pattern="^(approve|reject)_.*$"))
+        
+        # Start background tasks
+        application.job_queue.run_repeating(hourly_star_update, interval=3600)  # Run every hour
+        application.job_queue.run_daily(daily_lottery_draw, time=time(0, 0))  # Run at midnight
+        
+        logger.info("Bot is ready to handle updates")
+        
+        # Start the bot
+        await application.initialize()
+        await application.start()
+        await application.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+    except Exception as e:
+        logger.error(f"Critical error: {str(e)}")
+        raise e
+    finally:
+        if application:
+            await application.stop()
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot stopped due to error: {str(e)}")

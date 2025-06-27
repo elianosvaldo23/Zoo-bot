@@ -222,6 +222,13 @@ def main():
         # Run database initialization
         asyncio.run(init_and_run())
         
+        # Ensure we have an event loop for run_polling
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
         # Start the bot using run_polling which handles the event loop properly
         application.run_polling(allowed_updates=Update.ALL_TYPES)
 

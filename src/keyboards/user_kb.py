@@ -71,7 +71,35 @@ def balance_keyboard():
         [InlineKeyboardButton("💰 Convert Money to USDT", callback_data="convert_money")],
         [InlineKeyboardButton("💎 Buy Diamonds", callback_data="buy_diamonds")],
         [InlineKeyboardButton("📤 Withdraw", callback_data="withdraw")],
+        [InlineKeyboardButton("💳 Deposit", callback_data="deposit_menu")],
         [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def deposit_networks_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("USDT TRC20", callback_data="deposit_usdt_trc20")],
+        [InlineKeyboardButton("USDT BEP20", callback_data="deposit_usdt_bep20")],
+        [InlineKeyboardButton("TRX BEP20", callback_data="deposit_trx_bep20")],
+        [InlineKeyboardButton("TON", callback_data="deposit_ton")],
+        [InlineKeyboardButton("Telegram Stars", callback_data="deposit_stars")],
+        [InlineKeyboardButton("🔙 Back", callback_data="back_to_balance")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def deposit_confirmation_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("✅ Recarga Realizada", callback_data="deposit_completed")],
+        [InlineKeyboardButton("❌ Cancelar", callback_data="deposit_cancel")],
+        [InlineKeyboardButton("🔙 Volver", callback_data="back_to_deposit")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def admin_deposit_keyboard(deposit_id: str):
+    keyboard = [
+        [InlineKeyboardButton("✅ Aprobar Depósito", callback_data=f"approve_deposit_{deposit_id}")],
+        [InlineKeyboardButton("❌ Rechazar Depósito", callback_data=f"reject_deposit_{deposit_id}")],
+        [InlineKeyboardButton("🔙 Volver", callback_data="back_to_admin")]
     ]
     return InlineKeyboardMarkup(keyboard)
 

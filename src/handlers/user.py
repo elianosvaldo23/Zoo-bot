@@ -167,3 +167,28 @@ async def show_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ref_text,
         reply_markup=referral_keyboard()
     )
+
+async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle settings menu from message"""
+    user = update.effective_user
+    user_data = await db.get_user(user.id)
+    user_language = user_data.get('language', 'en')
+    
+    from src.keyboards.user_kb import settings_keyboard
+    
+    settings_text = lang_manager.get_text('settings_menu', user_language)
+    await update.message.reply_text(
+        settings_text,
+        reply_markup=settings_keyboard(user_language)
+    )
+
+async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle shop menu from message"""
+    user = update.effective_user
+    user_data = await db.get_user(user.id)
+    user_language = user_data.get('language', 'en')
+    
+    await update.message.reply_text(
+        lang_manager.get_text('shop_menu', user_language),
+        reply_markup=shop_keyboard(user_language)
+    )

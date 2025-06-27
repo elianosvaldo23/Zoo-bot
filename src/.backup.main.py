@@ -20,7 +20,7 @@ from src.config import BOT_TOKEN, LOTTERY_TICKET_PRICE, TEST_MODE, TEST_BOT
 from src.database.mongodb import db
 from src.handlers.user import (
     start, my_zoo, collect_stars,
-    show_balance, show_referrals, 
+    show_balance, show_referrals, show_settings, show_shop
 )
 from src.handlers.games import (
     show_games, battle_setup, adjust_bet,
@@ -41,14 +41,11 @@ from src.handlers.referral import (
 from src.handlers.callbacks import (
     handle_language_selection, handle_convert_stars, handle_convert_money,
     handle_buy_diamonds, handle_withdraw, handle_back_to_main,
-    handle_referrals, handle_shop_menu, handle_change_language,
+    handle_referrals, handle_shop_menu, handle_settings, handle_change_language,
     handle_my_referrals, handle_referral_earnings, handle_diamond_purchase,
     handle_set_withdrawal_address, handle_back_to_shop, handle_back_to_balance,
     handle_back_to_settings, handle_view_deposits, handle_view_withdrawals,
     handle_view_stats
-    handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
-    handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
-    handle_deposit_screenshot,
 )
 
 # Configure logging to both file and console
@@ -239,30 +236,19 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
         
         # Settings handlers
-        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen")))
+        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen"), handle_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
         application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))
         application.add_handler(CallbackQueryHandler(handle_view_deposits, pattern="^view_deposits$"))
         application.add_handler(CallbackQueryHandler(handle_view_withdrawals, pattern="^view_withdrawals$"))
         application.add_handler(CallbackQueryHandler(handle_view_stats, pattern="^view_stats$"))
-    handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
-    handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
-    handle_deposit_screenshot,
         
         # Referral handlers (new)
         application.add_handler(CallbackQueryHandler(handle_my_referrals, pattern="^my_referrals$"))
         application.add_handler(CallbackQueryHandler(handle_referral_earnings, pattern="^referral_earnings$"))
         
         # Diamond purchase handlers
-        # Deposit handlers
-        application.add_handler(CallbackQueryHandler(handle_deposit_menu, pattern="^deposit_menu$"))
-        application.add_handler(CallbackQueryHandler(handle_deposit_network, pattern="^deposit_(usdt_trc20|usdt_bep20|trx_bep20|ton|stars)$"))
-        application.add_handler(CallbackQueryHandler(handle_deposit_completed, pattern="^deposit_completed$"))
-        application.add_handler(CallbackQueryHandler(handle_approve_deposit, pattern="^approve_deposit_.*$"))
-        application.add_handler(CallbackQueryHandler(handle_reject_deposit, pattern="^reject_deposit_.*$"))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deposit_amount_message))
-        application.add_handler(MessageHandler(filters.PHOTO, handle_deposit_screenshot))
         application.add_handler(CallbackQueryHandler(handle_diamond_purchase, pattern="^buy_diamond_pkg_.*$"))
         
         # Navigation handlers (additional)

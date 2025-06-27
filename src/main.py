@@ -187,12 +187,12 @@ def main():
         application.add_handler(CommandHandler("admin", admin_menu))
         
         # Message handlers - Multi-language support
-        application.add_handler(MessageHandler(filters.Regex("^🏰"), my_zoo))
-        application.add_handler(MessageHandler(filters.Regex("^⭐"), collect_stars))
-        application.add_handler(MessageHandler(filters.Regex("^💰"), show_balance))
-        application.add_handler(MessageHandler(filters.Regex("^🎮"), show_games))
-        application.add_handler(MessageHandler(filters.Regex("^👥"), show_referrals))
-        application.add_handler(MessageHandler(filters.Regex("^💎"), handle_shop_menu))
+        application.add_handler(MessageHandler(filters.Regex("^🏰.*Zoo|^🏰.*Mi Zoo|^🏰.*Meu Zoo|^🏰.*Mon Zoo|^🏰.*Mein Zoo"), my_zoo))
+        application.add_handler(MessageHandler(filters.Regex("^⭐.*Collect|^⭐.*Recolectar|^⭐.*Coletar|^⭐.*Collecter|^⭐.*Sammeln"), collect_stars))
+        application.add_handler(MessageHandler(filters.Regex("^💰.*Balance|^💰.*Saldo|^💰.*Solde|^💰.*Guthaben"), show_balance))
+        application.add_handler(MessageHandler(filters.Regex("^🎮.*Games|^🎮.*Juegos|^🎮.*Jogos|^🎮.*Jeux|^🎮.*Spiele"), show_games))
+        application.add_handler(MessageHandler(filters.Regex("^👥.*Referrals|^👥.*Referidos|^👥.*Indicações|^👥.*Parrainages|^👥.*Empfehlungen"), show_referrals))
+        application.add_handler(MessageHandler(filters.Regex("^💎.*Shop|^💎.*Tienda|^💎.*Loja|^💎.*Boutique"), handle_shop_menu))
         
         # Animal handlers
         application.add_handler(CallbackQueryHandler(show_animal_shop, pattern="^shop_(common|rare|legendary)$"))
@@ -236,7 +236,7 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
         
         # Settings handlers
-        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações"), handle_settings))
+        application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen"), handle_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
         application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))

@@ -52,10 +52,12 @@ MIN_BET_AMOUNT = 10  # Minimum 💎 for betting
 LOTTERY_TICKET_PRICE = 100  # 💰 per ticket
 
 # Test Mode Settings
-if TEST_MODE:
-    class TestBot:
-        async def send_message(self, chat_id, text, **kwargs):
-            print(f"[TEST] Sending message to {chat_id}: {text}")
-            return True
+class TestBot:
+    async def send_message(self, chat_id, text, **kwargs):
+        print(f"[TEST] Sending message to {chat_id}: {text}")
+        return True
 
+if TEST_MODE:
     TEST_BOT = TestBot()
+else:
+    TEST_BOT = None

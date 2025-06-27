@@ -23,6 +23,12 @@ from src.handlers.admin import (
     admin_menu, handle_deposits, handle_withdrawals,
     handle_transaction
 )
+from src.handlers.animals import (
+    buy_animal, show_animal_shop
+)
+from src.handlers.referral import (
+    show_referral_stats, copy_referral_link
+)
 
 # Configure logging to both file and console
 logging.basicConfig(
@@ -168,12 +174,20 @@ async def main():
         application.add_handler(MessageHandler(filters.Regex("^🎮 Games$"), show_games))
         application.add_handler(MessageHandler(filters.Regex("^👥 Referrals$"), show_referrals))
         
-        # Callback query handlers
+        # Animal handlers
+        application.add_handler(CallbackQueryHandler(show_animal_shop, pattern="^shop_(common|rare|legendary)$"))
+        application.add_handler(CallbackQueryHandler(buy_animal, pattern="^buy_(common|rare|legendary)_.*$"))
+        
+        # Game handlers
         application.add_handler(CallbackQueryHandler(battle_setup, pattern="^game_battle$"))
         application.add_handler(CallbackQueryHandler(adjust_bet, pattern="^(increase|decrease)_bet$"))
         application.add_handler(CallbackQueryHandler(start_battle, pattern="^start_battle$"))
         application.add_handler(CallbackQueryHandler(play_dice_game, pattern="^game_dice$"))
         application.add_handler(CallbackQueryHandler(buy_lottery_ticket, pattern="^game_lottery$"))
+        
+        # Referral handlers
+        application.add_handler(CallbackQueryHandler(show_referral_stats, pattern="^show_referrals$"))
+        application.add_handler(CallbackQueryHandler(copy_referral_link, pattern="^copy_ref_link$"))
         
         # Admin handlers
         application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))

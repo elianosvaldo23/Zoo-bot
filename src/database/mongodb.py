@@ -19,25 +19,47 @@ class MockDB:
     async def close(self):
         self._connected = False
 
-    async def find_one(self, collection: str, query: Dict = None) -> Optional[Dict]:
+    async def get_user(self, user_id: int) -> Optional[Dict]:
+        return self.users.get(str(user_id))
+
+    async def create_user(self, user_data: Dict):
+        self.users[str(user_data['user_id'])] = user_data
+        return True
+
+    async def update_user(self, user_id: int, update_data: Dict):
+        if str(user_id) in self.users:
+            self.users[str(user_id)].update(update_data)
+            return True
+        return False
+
+    async def update_user_balance(self, user_id: int, field: str, amount: float):
+        if str(user_id) in self.users:
+            self.users[str(user_id)][field] = self.users[str(user_id)].get(field, 0) + amount
+            return True
+        return False
+
+    async def add_animal(self, user_id: int, animal: Dict):
+        if str(user_id) in self.users:
+            if 'animals' not in self.users[str(user_id)]:
+                self.users[str(user_id)]['animals'] = []
+            self.users[str(user_id)]['animals'].append(animal)
+            return True
+        return False
+
+    async def find(self, collection: str, query: Dict = None) -> List[Dict]:
         collection_data = getattr(self, collection, {})
-        if not query:
-            return next(iter(collection_data.values()), None)
-        
+        results = []
         for item in collection_data.values():
-            if all(item.get(k) == v for k, v in query.items()):
-                return item
-        return None
+            if not query or all(item.get(k) == v for k, v in query.items()):
+                results.append(item)
+        return results
 
     async def insert_one(self, collection: str, document: Dict):
         if not hasattr(self, collection):
             setattr(self, collection, {})
         collection_data = getattr(self, collection)
         
-        if 'id' not in document and 'user_id' not in document:
-            document['id'] = str(len(collection_data) + 1)
-        
-        key = document.get('id', document.get('user_id'))
+        key = str(document.get('id', document.get('user_id')))
         collection_data[key] = document
         return True
 
@@ -53,30 +75,8 @@ class MockDB:
                 return True
         return False
 
-class MockCollection:
-    def __init__(self, mock_db: MockDB, collection_name: str):
-        self.mock_db = mock_db
-        self.collection_name = collection_name
-
-    async def find_one(self, query: Dict = None) -> Optional[Dict]:
-        return await self.mock_db.find_one(self.collection_name, query)
-
-    async def insert_one(self, document: Dict):
-        return await self.mock_db.insert_one(self.collection_name, document)
-
-    async def update_one(self, query: Dict, update: Dict):
-        return await self.mock_db.update_one(self.collection_name, query, update)
-
-    async def find(self, query: Dict = None):
-        collection_data = getattr(self.mock_db, self.collection_name, {})
-        results = []
-        for item in collection_data.values():
-            if not query or all(item.get(k) == v for k, v in query.items()):
-                results.append(item)
-        return results
-
-    async def delete_many(self, query: Dict):
-        collection_data = getattr(self.mock_db, self.collection_name, {})
+    async def delete_many(self, collection: str, query: Dict):
+        collection_data = getattr(self, collection, {})
         to_delete = []
         for key, item in collection_data.items():
             if all(item.get(k) == v for k, v in query.items()):
@@ -104,9 +104,24 @@ class MongoDB:
         elif self.client:
             self.client.close()
 
+    async def get_user(self, user_id: int):
+        if MOCK_DATA:
+            return await self.mock_db.get_user(user_id)
+        return None
+
+    async def add_animal(self, user_id: int, animal: Dict):
+        if MOCK_DATA:
+            return await self.mock_db.add_animal(user_id, animal)
+        return False
+
+    async def update_user_balance(self, user_id: int, field: str, amount: float):
+        if MOCK_DATA:
+            return await self.mock_db.update_user_balance(user_id, field, amount)
+        return False
+
     def __getattr__(self, name):
         if MOCK_DATA:
-            return MockCollection(self.mock_db, name)
+            return getattr(self.mock_db, name)
         raise AttributeError(f"'{self.__class__.__name__}' has no attribute '{name}'")
 
 db = MongoDB()

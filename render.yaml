@@ -1,0 +1,16 @@
+
+services:
+  - type: web
+    name: zoo-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: DB_NAME
+        value: zoo_bot
+      - key: ADMIN_IDS
+        sync: false

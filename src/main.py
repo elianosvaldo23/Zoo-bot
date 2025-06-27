@@ -214,15 +214,31 @@ async def main():
         
     except Exception as e:
         logger.error(f"Critical error: {str(e)}")
-        raise e
     finally:
         if application:
-            await application.stop()
+            try:
+                await application.stop()
+                await db.close()
+            except Exception as e:
+                logger.error(f"Error during shutdown: {str(e)}")
 
-if __name__ == "__main__":
+def run_bot():
+    """Run the bot with proper event loop handling"""
     try:
-        asyncio.run(main())
+        # Check if there's already a running event loop
+        try:
+            loop = asyncio.get_running_loop()
+            logger.warning("Event loop already running, creating new task")
+            # If we're in an existing loop, create a task
+            task = loop.create_task(main())
+            return task
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
         logger.error(f"Bot stopped due to error: {str(e)}")
+
+if __name__ == "__main__":
+    run_bot()

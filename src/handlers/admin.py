@@ -438,6 +438,90 @@ async def handle_search_user_message(update: Update, context: ContextTypes.DEFAU
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+async def set_usdt_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set the MONEY to USDT conversion rate"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Access denied!")
+        return
+
+    try:
+        new_rate = int(context.args[0])
+        if new_rate <= 0:
+            raise ValueError
+    except (IndexError, ValueError):
+        await update.message.reply_text("❌ Please provide a valid positive number\nFormat: /set_usdt_rate <number>")
+        return
+
+    # Update rate in database
+    await db.db.settings.update_one(
+        {"key": "MONEY_TO_USDT_RATE"},
+        {"$set": {"value": new_rate}},
+        upsert=True
+    )
+    
+    # Update in-memory config
+    from src.config import update_rate
+    update_rate("MONEY_TO_USDT_RATE", new_rate)
+    
+    await update.message.reply_text(f"✅ USDT rate updated: {new_rate} 💰 = 1 💵")
+
+async def set_star_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set the STAR to MONEY conversion rate"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Access denied!")
+        return
+
+    try:
+        new_rate = int(context.args[0])
+        if new_rate <= 0:
+            raise ValueError
+    except (IndexError, ValueError):
+        await update.message.reply_text("❌ Please provide a valid positive number\nFormat: /set_star_rate <number>")
+        return
+
+    # Update rate in database
+    await db.db.settings.update_one(
+        {"key": "STARS_TO_MONEY_RATE"},
+        {"$set": {"value": new_rate}},
+        upsert=True
+    )
+    
+    # Update in-memory config
+    from src.config import update_rate
+    update_rate("STARS_TO_MONEY_RATE", new_rate)
+    
+    await update.message.reply_text(f"✅ Star rate updated: 1 ⭐ = {new_rate} 💰")
+
+async def set_lottery_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set the lottery ticket price"""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Access denied!")
+        return
+
+    try:
+        new_price = int(context.args[0])
+        if new_price <= 0:
+            raise ValueError
+    except (IndexError, ValueError):
+        await update.message.reply_text("❌ Please provide a valid positive number\nFormat: /set_lottery_price <number>")
+        return
+
+    # Update price in database
+    await db.db.settings.update_one(
+        {"key": "LOTTERY_TICKET_PRICE"},
+        {"$set": {"value": new_price}},
+        upsert=True
+    )
+    
+    # Update in-memory config
+    from src.config import update_rate
+    update_rate("LOTTERY_TICKET_PRICE", new_price)
+    
+    await update.message.reply_text(f"✅ Lottery ticket price updated: {new_price} 💰")
+
 async def handle_back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle back to admin menu"""
     user_id = update.effective_user.id

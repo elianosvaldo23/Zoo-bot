@@ -20,6 +20,16 @@ DB_NAME = 'zoolbot'
 STARS_TO_MONEY_RATE = 1  # 1 🌟 = 1 💰
 MONEY_TO_USDT_RATE = 10000  # 10000 💰 = 1 USDT
 
+def update_rate(rate_type, new_value):
+    """Update rate in memory"""
+    global STARS_TO_MONEY_RATE, MONEY_TO_USDT_RATE, LOTTERY_TICKET_PRICE
+    if rate_type == "STARS_TO_MONEY_RATE":
+        STARS_TO_MONEY_RATE = new_value
+    elif rate_type == "MONEY_TO_USDT_RATE":
+        MONEY_TO_USDT_RATE = new_value
+    elif rate_type == "LOTTERY_TICKET_PRICE":
+        LOTTERY_TICKET_PRICE = new_value
+
 # Referral System
 REFERRAL_BONUS = 300  # 💰
 REFERRAL_LEVELS = {

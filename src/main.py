@@ -31,7 +31,8 @@ from src.handlers.admin import (
     handle_transaction, handle_user_management, handle_view_users,
     handle_user_stats, handle_admin_settings, handle_broadcast,
     handle_exchange_rates, handle_back_to_admin, handle_search_user,
-    handle_game_settings, handle_broadcast_message, handle_search_user_message
+    handle_game_settings, handle_broadcast_message, handle_search_user_message,
+    set_usdt_rate, set_star_rate, set_lottery_price
 )
 from src.handlers.animals import (
     buy_animal, show_animal_shop
@@ -44,12 +45,15 @@ from src.handlers.callbacks import (
     handle_buy_diamonds, handle_withdraw, handle_back_to_main,
     handle_referrals, handle_shop_menu, handle_change_language, handle_settings,
     handle_my_referrals, handle_referral_earnings, handle_diamond_purchase,
-    handle_set_withdrawal_address, handle_back_to_shop, handle_back_to_balance,
+    handle_back_to_shop, handle_back_to_balance,
     handle_back_to_settings, handle_view_deposits, handle_view_withdrawals,
     handle_view_stats,
     handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
     handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
     handle_deposit_screenshot,
+)
+from src.handlers.withdrawal import (
+    handle_withdrawal_setup, handle_withdrawal_address, handle_withdrawal_network
 )
 
 # Configure logging to both file and console
@@ -155,17 +159,25 @@ async def daily_lottery_draw(context):
         logger.error(f"Error in daily lottery draw: {str(e)}")
 
 async def startup():
+    """Initialize database and other startup tasks"""
     try:
-        # Connect to database
+        # Initialize database connection
         await db.connect()
-        logger.info("Successfully connected to MongoDB")
-        
-        # Test database connection
-        await db.users.find_one({})
-        logger.info("Successfully tested MongoDB connection")
+        logger.info("Database connection established")
+
+        # Load rates from database
+        from src.config import update_rate
+        rates = await db.db.settings.find({
+            "key": {"$in": ["MONEY_TO_USDT_RATE", "STARS_TO_MONEY_RATE", "LOTTERY_TICKET_PRICE"]}
+        }).to_list(length=None)
+
+        for rate in rates:
+            update_rate(rate["key"], rate["value"])
+            logger.info(f"Loaded rate {rate['key']}: {rate['value']}")
+
         return True
     except Exception as e:
-        logger.error(f"Error during startup: {str(e)}")
+        logger.error(f"Database initialization failed: {str(e)}")
         return False
 
 def main():
@@ -287,10 +299,14 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_shop_menu, pattern="^shop$"))
         
         # Admin handlers
-        application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^admin_deposits$"))
-        application.add_handler(CallbackQueryHandler(handle_withdrawals, pattern="^admin_withdrawals$"))
-        application.add_handler(CallbackQueryHandler(handle_transaction, pattern="^(approve|reject)_.*$"))
-        application.add_handler(CallbackQueryHandler(handle_user_management, pattern="^admin_users$"))
+        application.add_handler(CommandHandler("admin", admin_menu))
+        application.add_handler(CommandHandler("set_usdt_rate", set_usdt_rate))
+        application.add_handler(CommandHandler("set_star_rate", set_star_rate))
+        application.add_handler(CommandHandler("set_lottery_price", set_lottery_price))
+        application.add_handler(CallbackQueryHandler(handle_deposits, pattern="^deposits$"))
+        application.add_handler(CallbackQueryHandler(handle_withdrawals, pattern="^withdrawals$"))
+        application.add_handler(CallbackQueryHandler(handle_transaction, pattern="^transaction_.*$"))
+        application.add_handler(CallbackQueryHandler(handle_user_management, pattern="^users$"))
         application.add_handler(CallbackQueryHandler(handle_view_users, pattern="^view_users$"))
         application.add_handler(CallbackQueryHandler(handle_user_stats, pattern="^user_stats$"))
         application.add_handler(CallbackQueryHandler(handle_admin_settings, pattern="^admin_settings$"))
@@ -308,7 +324,9 @@ def main():
         application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen"), show_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
-        application.add_handler(CallbackQueryHandler(handle_set_withdrawal_address, pattern="^set_withdrawal_address$"))
+        application.add_handler(CallbackQueryHandler(handle_withdrawal_setup, pattern="^set_withdrawal_address$"))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_withdrawal_address))
+        application.add_handler(CallbackQueryHandler(handle_withdrawal_network, pattern="^withdrawal_network_.*$"))
         application.add_handler(CallbackQueryHandler(handle_view_deposits, pattern="^view_deposits$"))
         application.add_handler(CallbackQueryHandler(handle_view_withdrawals, pattern="^view_withdrawals$"))
         application.add_handler(CallbackQueryHandler(handle_view_stats, pattern="^view_stats$"))

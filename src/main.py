@@ -50,10 +50,13 @@ from src.handlers.callbacks import (
     handle_view_stats,
     handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
     handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
-    handle_deposit_screenshot,
+    handle_deposit_screenshot, handle_deposit_cancel,
 )
 from src.handlers.withdrawal import (
     handle_withdrawal_setup, handle_withdrawal_address, handle_withdrawal_network
+)
+from src.handlers.message_router import (
+    handle_text_message, handle_photo_message
 )
 
 # Configure logging to both file and console
@@ -201,62 +204,6 @@ def main():
         # Register handlers
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("admin", admin_menu))
-        
-        # Admin command handlers
-        async def set_star_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            user_id = update.effective_user.id
-            from src.config import ADMIN_IDS
-            if user_id not in ADMIN_IDS:
-                await update.message.reply_text("❌ Access denied!")
-                return
-            
-            if not context.args or len(context.args) != 1:
-                await update.message.reply_text("Usage: /set_star_rate <rate>")
-                return
-            
-            try:
-                new_rate = float(context.args[0])
-                # Update config (this would need to be implemented properly)
-                await update.message.reply_text(f"⭐ Star rate updated to: {new_rate}")
-            except ValueError:
-                await update.message.reply_text("❌ Invalid rate! Please provide a number.")
-        
-        async def set_usdt_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            user_id = update.effective_user.id
-            from src.config import ADMIN_IDS
-            if user_id not in ADMIN_IDS:
-                await update.message.reply_text("❌ Access denied!")
-                return
-            
-            if not context.args or len(context.args) != 1:
-                await update.message.reply_text("Usage: /set_usdt_rate <rate>")
-                return
-            
-            try:
-                new_rate = float(context.args[0])
-                # Update config (this would need to be implemented properly)
-                await update.message.reply_text(f"💵 USDT rate updated to: {new_rate}")
-            except ValueError:
-                await update.message.reply_text("❌ Invalid rate! Please provide a number.")
-        
-        async def set_lottery_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            user_id = update.effective_user.id
-            from src.config import ADMIN_IDS
-            if user_id not in ADMIN_IDS:
-                await update.message.reply_text("❌ Access denied!")
-                return
-            
-            if not context.args or len(context.args) != 1:
-                await update.message.reply_text("Usage: /set_lottery_price <price>")
-                return
-            
-            try:
-                new_price = float(context.args[0])
-                # Update config (this would need to be implemented properly)
-                await update.message.reply_text(f"🎫 Lottery price updated to: {new_price}")
-            except ValueError:
-                await update.message.reply_text("❌ Invalid price! Please provide a number.")
-        
         application.add_handler(CommandHandler("set_star_rate", set_star_rate))
         application.add_handler(CommandHandler("set_usdt_rate", set_usdt_rate))
         application.add_handler(CommandHandler("set_lottery_price", set_lottery_price))
@@ -316,16 +263,11 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_game_settings, pattern="^game_settings$"))
         application.add_handler(CallbackQueryHandler(handle_back_to_admin, pattern="^back_to_admin$"))
         
-        # Admin message handlers
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast_message))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_user_message))
-        
         # Settings handlers
         application.add_handler(MessageHandler(filters.Regex("^⚙️.*Settings|^⚙️.*Ajustes|^⚙️.*Configurações|^⚙️.*Paramètres|^⚙️.*Einstellungen"), show_settings))
         application.add_handler(CallbackQueryHandler(handle_settings, pattern="^settings$"))
         application.add_handler(CallbackQueryHandler(handle_change_language, pattern="^change_language$"))
         application.add_handler(CallbackQueryHandler(handle_withdrawal_setup, pattern="^set_withdrawal_address$"))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_withdrawal_address))
         application.add_handler(CallbackQueryHandler(handle_withdrawal_network, pattern="^withdrawal_network_.*$"))
         application.add_handler(CallbackQueryHandler(handle_view_deposits, pattern="^view_deposits$"))
         application.add_handler(CallbackQueryHandler(handle_view_withdrawals, pattern="^view_withdrawals$"))
@@ -340,11 +282,14 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_deposit_menu, pattern="^deposit_menu$"))
         application.add_handler(CallbackQueryHandler(handle_deposit_network, pattern="^deposit_(usdt_trc20|usdt_bep20|trx_bep20|ton|stars)$"))
         application.add_handler(CallbackQueryHandler(handle_deposit_completed, pattern="^deposit_completed$"))
+        application.add_handler(CallbackQueryHandler(handle_deposit_cancel, pattern="^deposit_cancel$"))
         application.add_handler(CallbackQueryHandler(handle_approve_deposit, pattern="^approve_deposit_.*$"))
         application.add_handler(CallbackQueryHandler(handle_reject_deposit, pattern="^reject_deposit_.*$"))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deposit_amount_message))
-        application.add_handler(MessageHandler(filters.PHOTO, handle_deposit_screenshot))
         application.add_handler(CallbackQueryHandler(handle_diamond_purchase, pattern="^buy_diamond_pkg_.*$"))
+        
+        # Unified message handlers (handles all states)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+        application.add_handler(MessageHandler(filters.PHOTO, handle_photo_message))
         
         # Navigation handlers (additional)
         application.add_handler(CallbackQueryHandler(handle_back_to_shop, pattern="^back_to_shop$"))

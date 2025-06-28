@@ -4,8 +4,11 @@ from src.database.mongodb import db
 
 async def handle_withdrawal_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start withdrawal address setup"""
+    query = update.callback_query
+    await query.answer()
+    
     context.user_data['setting_withdrawal'] = True
-    await update.message.reply_text(
+    await query.edit_message_text(
         "📝 Por favor, ingresa tu dirección de retiro:"
     )
 
@@ -39,9 +42,12 @@ async def handle_withdrawal_network(update: Update, context: ContextTypes.DEFAUL
     network = query.data.split('_')[2]
     user_id = query.from_user.id
     
+    # Get withdrawal address before clearing context
+    withdrawal_address = context.user_data.get('withdrawal_address', 'Unknown')
+    
     # Save withdrawal settings to database
     await db.update_user(user_id, {
-        f"withdrawal_address_{network}": context.user_data['withdrawal_address']
+        f"withdrawal_address_{network}": withdrawal_address
     })
     
     # Clear setup state
@@ -50,5 +56,5 @@ async def handle_withdrawal_network(update: Update, context: ContextTypes.DEFAUL
     
     await query.edit_message_text(
         f"✅ Dirección de retiro guardada para la red {network.upper()}\n"
-        f"Dirección: {context.user_data['withdrawal_address']}"
+        f"Dirección: {withdrawal_address}"
     )

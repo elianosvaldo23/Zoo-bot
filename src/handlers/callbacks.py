@@ -620,7 +620,7 @@ async def handle_deposit_cancel(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop('deposit_network', None)
     context.user_data.pop('deposit_address', None)
     context.user_data.pop('deposit_amount', None)
-    context.user_data.pop('waiting_for_deposit_amount', None)
+    context.user_data.pop('waiting_for_amount', None)
     context.user_data.pop('waiting_for_screenshot', None)
     
     await query.edit_message_text(

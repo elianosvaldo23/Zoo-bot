@@ -201,8 +201,14 @@ async def handle_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = await db.get_user(user_id)
     user_language = user_data.get('language', 'en')
     
-    withdrawal_address = user_data.get('withdrawal_address')
-    if not withdrawal_address:
+    # Check for withdrawal addresses in any network
+    withdrawal_addresses = {}
+    for network in ['trc20', 'bep20', 'erc20']:
+        addr = user_data.get(f'withdrawal_address_{network}')
+        if addr:
+            withdrawal_addresses[network] = addr
+    
+    if not withdrawal_addresses:
         await query.edit_message_text(
             lang_manager.get_text('no_withdrawal_address', user_language),
             reply_markup=InlineKeyboardMarkup([[
@@ -213,6 +219,29 @@ async def handle_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         )
         return
+    
+    # If user has multiple addresses, let them choose network
+    if len(withdrawal_addresses) > 1:
+        keyboard = []
+        for network, address in withdrawal_addresses.items():
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"{network.upper()} - {address[:10]}...",
+                    callback_data=f"withdraw_network_{network}"
+                )
+            ])
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_balance")])
+        
+        await query.edit_message_text(
+            "🌐 Selecciona la red para el retiro:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+    
+    # If only one address, use it directly
+    network = list(withdrawal_addresses.keys())[0]
+    withdrawal_address = withdrawal_addresses[network]
+    context.user_data['withdrawal_network'] = network
     
     usdt_balance = user_data.get('balance_usdt', 0)
     if usdt_balance < 10:  # Minimum withdrawal amount
@@ -241,6 +270,64 @@ async def handle_withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         lang_manager.get_text('withdrawal_submitted', user_language, amount=usdt_balance),
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back to Balance", callback_data="back_to_balance")
+        ]])
+    )
+
+async def handle_withdraw_network(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle withdrawal network selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user_data = await db.get_user(user_id)
+    user_language = user_data.get('language', 'en')
+    
+    network = query.data.split('_')[2]
+    withdrawal_address = user_data.get(f'withdrawal_address_{network}')
+    
+    if not withdrawal_address:
+        await query.edit_message_text(
+            "❌ Error: Dirección no encontrada para esta red.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="back_to_balance")
+            ]])
+        )
+        return
+    
+    usdt_balance = user_data.get('balance_usdt', 0)
+    if usdt_balance < 10:  # Minimum withdrawal amount
+        await query.edit_message_text(
+            lang_manager.get_text('insufficient_withdrawal', user_language, min_amount=10),
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="back_to_balance")
+            ]])
+        )
+        return
+    
+    # Create withdrawal request
+    withdrawal_id = f"w_{user_id}_{int(datetime.now().timestamp())}"
+    await db.create_transaction({
+        'id': withdrawal_id,
+        'user_id': user_id,
+        'type': 'withdrawal',
+        'amount': usdt_balance,
+        'address': withdrawal_address,
+        'network': network,
+        'status': 'pending',
+        'created_at': datetime.now()
+    })
+    
+    # Update user balance
+    await db.update_user_balance(user_id, "balance_usdt", -usdt_balance)
+    
+    await query.edit_message_text(
+        f"✅ Solicitud de retiro enviada\n\n"
+        f"💰 Monto: {usdt_balance} USDT\n"
+        f"🌐 Red: {network.upper()}\n"
+        f"📍 Dirección: {withdrawal_address}\n\n"
+        f"Tu retiro será procesado por un administrador.",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔙 Back to Balance", callback_data="back_to_balance")
         ]])

@@ -50,7 +50,7 @@ from src.handlers.callbacks import (
     handle_view_stats,
     handle_deposit_menu, handle_deposit_network, handle_deposit_completed,
     handle_approve_deposit, handle_reject_deposit, handle_deposit_amount_message,
-    handle_deposit_screenshot, handle_deposit_cancel,
+    handle_deposit_screenshot, handle_deposit_cancel, handle_withdraw_network,
 )
 from src.handlers.withdrawal import (
     handle_withdrawal_setup, handle_withdrawal_address, handle_withdrawal_network
@@ -239,6 +239,7 @@ def main():
         application.add_handler(CallbackQueryHandler(handle_convert_money, pattern="^convert_money$"))
         application.add_handler(CallbackQueryHandler(handle_buy_diamonds, pattern="^buy_diamonds$"))
         application.add_handler(CallbackQueryHandler(handle_withdraw, pattern="^withdraw$"))
+        application.add_handler(CallbackQueryHandler(handle_withdraw_network, pattern="^withdraw_network_.*$"))
         
         # Navigation handlers
         application.add_handler(CallbackQueryHandler(handle_back_to_main, pattern="^back_to_main$"))

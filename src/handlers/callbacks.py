@@ -877,7 +877,10 @@ async def handle_approve_deposit(update: Update, context: ContextTypes.DEFAULT_T
         await query.answer("❌ Access denied!")
         return
     
-    deposit_id = query.data.split("_")[2]  # Extract deposit ID
+    # Extract deposit ID from callback_data: approve_deposit_{deposit_id}
+    # deposit_id format is: dep_{user_id}_{timestamp}
+    parts = query.data.split("_")
+    deposit_id = "_".join(parts[2:])  # Join all parts after "approve_deposit"
     
     # Get deposit details
     deposit = await db.get_transaction(deposit_id)
@@ -916,7 +919,10 @@ async def handle_reject_deposit(update: Update, context: ContextTypes.DEFAULT_TY
         await query.answer("❌ Access denied!")
         return
     
-    deposit_id = query.data.split("_")[2]  # Extract deposit ID
+    # Extract deposit ID from callback_data: reject_deposit_{deposit_id}
+    # deposit_id format is: dep_{user_id}_{timestamp}
+    parts = query.data.split("_")
+    deposit_id = "_".join(parts[2:])  # Join all parts after "reject_deposit"
     
     # Get deposit details
     deposit = await db.get_transaction(deposit_id)
